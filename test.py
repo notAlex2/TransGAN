@@ -29,7 +29,14 @@ import random
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
-
+from collections import OrderedDict
+# https://discuss.pytorch.org/t/solved-keyerror-unexpected-key-module-encoder-embedding-weight-in-state-dict/1686/12
+def fix_state_dict(state_dict):
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = k[7:] # remove module.
+        new_state_dict[name] = v
+    return new_state_dict
 
 def main():
     args = cfg.parse_args()
@@ -46,8 +53,8 @@ def main():
     create_inception_graph(inception_path)
 
     # import network
-    gen_net = eval('models.'+args.gen_model+'.Generator')(args=args).cuda()
-    dis_net = eval('models.'+args.dis_model+'.Discriminator')(args=args).cuda()
+    gen_net = eval('models.'+args.gen_model+'.Generator')(args=args).cpu()
+    dis_net = eval('models.'+args.dis_model+'.Discriminator')(args=args).cpu()
     gen_net.set_arch(args.arch, cur_stage=2)
 
     # weight init
@@ -69,14 +76,14 @@ def main():
     gen_net.apply(weights_init)
     dis_net.apply(weights_init)
 
-    gpu_ids = [i for i in range(int(torch.cuda.device_count()))]
-    gen_net = torch.nn.DataParallel(gen_net.to("cuda:0"), device_ids=gpu_ids)
-    dis_net = torch.nn.DataParallel(dis_net.to("cuda:0"), device_ids=gpu_ids)
+    # gpu_ids = [i for i in range(int(torch.cuda.device_count()))]
+    # gen_net = torch.nn.DataParallel(gen_net.to("cpu:0"), device_ids=None)
+    # dis_net = torch.nn.DataParallel(dis_net.to("cpu:0"), device_ids=None)
 
-    gen_net.module.cur_stage = 0
-    dis_net.module.cur_stage = 0
-    gen_net.module.alpha = 1.
-    dis_net.module.alpha = 1.
+    # gen_net.module.cur_stage = 0
+    # dis_net.module.cur_stage = 0
+    # gen_net.module.alpha = 1.
+    # dis_net.module.alpha = 1.
 
     # set optimizer
     if args.optimizer == "adam":
@@ -111,7 +118,7 @@ def main():
         args.max_epoch = np.ceil(args.max_iter * args.n_critic / len(train_loader))
 
     # initial
-    fixed_z = torch.cuda.FloatTensor(np.random.normal(0, 1, (64, args.latent_dim)))
+    fixed_z = torch.FloatTensor(np.random.normal(0, 1, (64, args.latent_dim)))
     gen_avg_param = copy_params(gen_net)
     start_epoch = 0
     best_fid = 1e4
@@ -122,22 +129,22 @@ def main():
         assert os.path.exists(args.load_path)
         checkpoint_file = os.path.join(args.load_path)
         assert os.path.exists(checkpoint_file)
-        checkpoint = torch.load(checkpoint_file)
+        checkpoint = torch.load(checkpoint_file, map_location=torch.device('cpu'))
         start_epoch = checkpoint['epoch']
         best_fid = checkpoint['best_fid']
-        gen_net.load_state_dict(checkpoint['gen_state_dict'])
-        dis_net.load_state_dict(checkpoint['dis_state_dict'])
+        gen_net.load_state_dict(fix_state_dict(checkpoint['gen_state_dict']))
+        dis_net.load_state_dict(fix_state_dict(checkpoint['dis_state_dict']))
         gen_optimizer.load_state_dict(checkpoint['gen_optimizer'])
         dis_optimizer.load_state_dict(checkpoint['dis_optimizer'])
         avg_gen_net = deepcopy(gen_net)
-        avg_gen_net.load_state_dict(checkpoint['avg_gen_state_dict'])
+        avg_gen_net.load_state_dict(fix_state_dict(checkpoint['avg_gen_state_dict']))
         gen_avg_param = copy_params(avg_gen_net)
         del avg_gen_net
         cur_stage = cur_stages(start_epoch, args)
-        gen_net.module.cur_stage = cur_stage
-        dis_net.module.cur_stage = cur_stage
-        gen_net.module.alpha = 1.
-        dis_net.module.alpha = 1.
+        # gen_net.module.cur_stage = cur_stage
+        # dis_net.module.cur_stage = cur_stage
+        # gen_net.module.alpha = 1.
+        # dis_net.module.alpha = 1.
 
         # args.path_helper = checkpoint['path_helper']
         

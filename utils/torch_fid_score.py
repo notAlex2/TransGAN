@@ -290,15 +290,15 @@ def get_fid(args, fid_stat, epoch, gen_net, num_img, val_batch_size, writer_dict
         eval_iter = num_img // val_batch_size
         img_list = []
         for _ in tqdm(range(eval_iter), desc='sample images'):
-            z = torch.cuda.FloatTensor(np.random.normal(0, 1, (val_batch_size, args.latent_dim)))
+            z = torch.FloatTensor(np.random.normal(0, 1, (val_batch_size, args.latent_dim)))
 
             # Generate a batch of images
             if args.n_classes > 0:
                 if cls_idx is not None:
                     label = torch.ones(z.shape[0]) * cls_idx
-                    label = label.type(torch.cuda.LongTensor)
+                    label = label.type(torch.LongTensor)
                 else:
-                    label = torch.randint(low=0, high=args.n_classes, size=(z.shape[0],), device='cuda')
+                    label = torch.randint(low=0, high=args.n_classes, size=(z.shape[0],), device='cpu')
                 gen_imgs = gen_net(z, epoch)
             else:
                 gen_imgs = gen_net(z, epoch)
@@ -307,7 +307,7 @@ def get_fid(args, fid_stat, epoch, gen_net, num_img, val_batch_size, writer_dict
             img_list += [gen_imgs]
 
         img_list = torch.cat(img_list, 0)
-        fid_score = calculate_fid_given_paths_torch(img_list, fid_stat)
+        fid_score = calculate_fid_given_paths_torch(img_list, fid_stat, cuda=False)
 
     if writer_dict:
         writer = writer_dict['writer']

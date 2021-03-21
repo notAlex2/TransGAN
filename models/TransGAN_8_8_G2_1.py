@@ -47,7 +47,7 @@ class Mlp(nn.Module):
 
 
 def get_attn_mask(N, w):
-    mask = torch.zeros(1, 1, N, N).cuda()
+    mask = torch.zeros(1, 1, N, N).cpu()
     for i in range(N):
         if i <= w:
             mask[:, :, i, 0:i+w+1] = 1
@@ -96,7 +96,7 @@ class Attention(nn.Module):
                     mask = self.mask_8
                 else:
                     mask = self.mask_10
-                attn = attn.masked_fill(mask.to(attn.get_device()) == 0, -1e9)
+                attn = attn.masked_fill(mask)#.to(attn.get_device()) == 0, -1e9)
             else:
                 pass
         attn = attn.softmax(dim=-1)
@@ -208,14 +208,14 @@ class Generator(nn.Module):
 
     def forward(self, z, epoch):
         x = self.l1(z).view(-1, self.bottom_width ** 2, self.embed_dim)
-        x = x + self.pos_embed[0].to(x.get_device())
+        x = x + self.pos_embed[0]#.to(x.get_device())
         B = x.size()
         H, W = self.bottom_width, self.bottom_width
         for index, blk in enumerate(self.blocks):
             x = blk(x, epoch)
         for index, blk in enumerate(self.upsample_blocks):
             x, H, W = pixel_upsample(x, H, W)
-            x = x + self.pos_embed[index+1].to(x.get_device())
+            x = x + self.pos_embed[index+1]#.to(x.get_device())
             for b in blk:
                 x = b(x, epoch)
         output = self.deconv(x.permute(0, 2, 1).view(-1, self.embed_dim//16, H, W))
