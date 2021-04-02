@@ -96,7 +96,7 @@ class Attention(nn.Module):
                     mask = self.mask_8
                 else:
                     mask = self.mask_10
-                attn = attn.masked_fill(mask)#.to(attn.get_device()) == 0, -1e9)
+                attn = attn.masked_fill(mask == 0, -1e9) #.to(attn.get_device()) == 0, -1e9)
             else:
                 pass
         attn = attn.softmax(dim=-1)
