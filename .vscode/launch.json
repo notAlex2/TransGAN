@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/test.py",
             "console": "integratedTerminal",
             "args": [
-                "-gen_bs", "2",
+                "-gen_bs", "1",
                 "-dis_bs", "2",
                 "--dataset", "stl10",
                 "--bottom_width", "12",
