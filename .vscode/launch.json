@@ -11,8 +11,8 @@
             "program": "${workspaceFolder}/test.py",
             "console": "integratedTerminal",
             "args": [
-                "-gen_bs", "1",
-                "-dis_bs", "16",
+                "-gen_bs", "2",
+                "-dis_bs", "2",
                 "--dataset", "stl10",
                 "--bottom_width", "12",
                 "--img_size", "48",
@@ -44,7 +44,7 @@
                 "--grow_steps", "0", "0",
                 "--fade_in", "0",
                 "--diff_aug", "translation,cutout,color",
-                "--load_path", "./pretrained_weight/stl10_fid_24.8_checkpoint.pth",
+                // "--load_path", "./pretrained_weight/stl10_fid_24.8_checkpoint.pth",
                 "--exp_name", "stl10_test",
             ]
         }
